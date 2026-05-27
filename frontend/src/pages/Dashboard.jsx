@@ -1,8 +1,82 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, TrendingUp, UserMinus, Briefcase, GraduationCap, DollarSign, Brain, MessageSquare, ArrowRight, Upload } from 'lucide-react'
+import { Users, TrendingUp, UserMinus, Briefcase, GraduationCap, DollarSign, Brain, MessageSquare, ArrowRight, Upload, Github, Copy, Check, X } from 'lucide-react'
 import StatCard from '../components/StatCard'
 import { getDataStatus } from '../services/api'
+
+const GITHUB_URL = 'https://github.com/VipulPhatangare/genai'
+
+function GitHubPopup({ onClose }) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(GITHUB_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Card */}
+      <div className="relative w-full max-w-md card border-brand-500/30 bg-[#13151f] shadow-2xl animate-fade-in">
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-surface-600 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="p-6 space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center shrink-0">
+              <Github className="w-5 h-5 text-brand-400" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm">Source Code</p>
+              <p className="text-slate-400 text-xs mt-0.5">HR Analytics Intelligence Platform</p>
+            </div>
+          </div>
+
+          {/* URL box */}
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-surface-700 border border-surface-500/50">
+            <span className="text-brand-400 text-xs font-mono flex-1 truncate select-all">
+              {GITHUB_URL}
+            </span>
+            <button
+              onClick={handleCopy}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
+                copied
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-brand-500/15 text-brand-400 border border-brand-500/30 hover:bg-brand-500/25'
+              }`}
+            >
+              {copied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
+            </button>
+          </div>
+
+          {/* Open link */}
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-brand-500/15 border border-brand-500/30 text-brand-400 text-sm font-semibold hover:bg-brand-500/25 transition-colors"
+          >
+            <Github className="w-4 h-4" />
+            Open on GitHub
+          </a>
+
+          <p className="text-center text-xs text-slate-600">by SynthoMind Innovation</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const SECTIONS = [
   { to: '/performance',  label: 'Performance Analytics', sub: 'Skills, ratings, ideal profile',   icon: TrendingUp,    color: 'brand',   qs: 'Q1–Q5' },
@@ -18,6 +92,7 @@ const SECTIONS = [
 export default function Dashboard() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showGithub, setShowGithub] = useState(true)
 
   useEffect(() => {
     getDataStatus()
@@ -44,6 +119,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {showGithub && <GitHubPopup onClose={() => setShowGithub(false)} />}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard

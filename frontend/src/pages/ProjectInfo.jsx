@@ -5,7 +5,58 @@ import {
   ChevronRight, ChevronDown, Layers, Lock, AlertTriangle,
   Users, TrendingUp, GraduationCap, Briefcase, UserMinus,
   DollarSign, FlaskConical, Code2, Cpu, Clock, CheckCircle2,
+  Github, Copy, Check,
 } from 'lucide-react'
+
+const GITHUB_URL = 'https://github.com/VipulPhatangare/genai'
+
+function GitHubCard() {
+  const [copied, setCopied] = useState(false)
+  function handleCopy() {
+    navigator.clipboard.writeText(GITHUB_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <div className="card p-4 border-brand-500/20 bg-brand-500/3 flex items-center gap-4 flex-wrap">
+      <div className="w-9 h-9 rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center shrink-0">
+        <Github className="w-4.5 h-4.5 text-brand-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-xs font-semibold">Source Code — GitHub Repository</p>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand-400 text-xs font-mono hover:underline truncate block mt-0.5"
+        >
+          {GITHUB_URL}
+        </a>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={handleCopy}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            copied
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              : 'bg-surface-600 text-slate-300 border border-surface-500/40 hover:bg-surface-500/40'
+          }`}
+        >
+          {copied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
+        </button>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-500/15 text-brand-400 border border-brand-500/30 hover:bg-brand-500/25 transition-colors"
+        >
+          <Github className="w-3 h-3" /> Open
+        </a>
+      </div>
+    </div>
+  )
+}
 
 /* ─── Primitive UI helpers ─────────────────────────────────────── */
 
@@ -243,6 +294,9 @@ export default function ProjectInfo() {
           ))}
         </div>
       </div>
+
+      {/* ── GitHub Link ── */}
+      <GitHubCard />
 
       {/* ── User Workflow ── */}
       <SectionCard title="End-to-End User Workflow" icon={Users} iconColor="text-emerald-400">
