@@ -69,8 +69,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Project Info link — pinned above footer */}
-      <div className="px-3 pb-3">
+      {/* Footer — Project Info */}
+      <div className="px-3 py-4 border-t border-surface-500">
         <NavLink
           to="/project"
           className={({ isActive }) =>
@@ -96,12 +96,6 @@ export default function Sidebar() {
             </>
           )}
         </NavLink>
-      </div>
-
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-surface-500">
-        <p className="text-xs text-slate-600">Powered by</p>
-        <p className="text-xs text-slate-500 font-medium">SynthoMind Innovation</p>
       </div>
     </aside>
   )
