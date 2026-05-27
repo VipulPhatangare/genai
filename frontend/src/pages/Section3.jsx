@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { getQ11, getQ12, getQ13, getQ14 } from '../services/api'
 import { GroupedBarChart, SingleBarChart, ScatterPlot } from '../components/charts/index'
 import LLMInsightCard from '../components/LLMInsightCard'
+import AnalysisApproach from '../components/AnalysisApproach'
 
 const TABS = [
-  { id: 'q11', label: 'Soft Skill Clusters',     sub: 'Q11', hasLLM: true, question: 'How do employees cluster based on Leadership, Teamwork, Adaptability & Creativity — and what describes each cluster?' },
-  { id: 'q12', label: 'Conflict vs Teamwork',     sub: 'Q12', hasLLM: true, question: 'Why do some employees have high conflict resolution cases but low teamwork scores — what explains the contradiction?' },
-  { id: 'q13', label: 'Engagement Impact',         sub: 'Q13', question: 'How does Employee Engagement Score impact Job Satisfaction and Retention rates?' },
-  { id: 'q14', label: 'Initiative vs Innovation', sub: 'Q14', hasLLM: true, question: 'Why do high-initiative employees show low innovation contribution — what blockers are at play?' },
+  { id: 'q11', label: 'Soft Skill Clusters',     sub: 'Q11', hasLLM: true, question: 'How do employees cluster based on Leadership, Teamwork, Adaptability & Creativity — and what describes each cluster?', columns: ['Leadership_Qualities_Rating', 'Teamwork_Skills_Rating', 'Adaptability_Rating', 'Creativity_Rating'], approach: 'Applied KMeans clustering (k=4) on four soft-skill dimensions: Leadership, Teamwork, Adaptability, Creativity. Each cluster center reveals a distinct behavioural archetype. Cluster size and dominant department were computed per group. AI labels each archetype with a human-readable description and explains what drives each cluster\'s trait profile.' },
+  { id: 'q12', label: 'Conflict vs Teamwork',     sub: 'Q12', hasLLM: true, question: 'Why do some employees have high conflict resolution cases but low teamwork scores — what explains the contradiction?', columns: ['Conflict_Resolution_Cases', 'Teamwork_Skills_Rating', 'Employee_Engagement_Score'], approach: 'Filtered employees in the high-conflict (Conflict_Resolution_Cases > 2) AND low-teamwork (Teamwork_Skills_Rating < 5) quadrant. A scatter plot highlights these outliers against the full population. Grouped by Job_Role to identify roles where the contradiction clusters most. AI reasons over engagement scores and role patterns to explain the paradox.' },
+  { id: 'q13', label: 'Engagement Impact',         sub: 'Q13', question: 'How does Employee Engagement Score impact Job Satisfaction and Retention rates?', columns: ['Employee_Engagement_Score', 'Employee_Job_Satisfaction_Score', 'Employee_Resignation_Status'], approach: 'Computed Pearson r between Employee_Engagement_Score and Employee_Job_Satisfaction_Score. Bucketed engagement into Low / Medium / High tiers. For each tier, computed Resignation_Rate and average Job_Satisfaction. A scatter plot visualises the raw continuous relationship, while the grouped bars reveal the threshold effect.' },
+  { id: 'q14', label: 'Initiative vs Innovation', sub: 'Q14', hasLLM: true, question: 'Why do high-initiative employees show low innovation contribution — what blockers are at play?', columns: ['Initiative_Rating', 'Innovation_Projects_Involvement', 'performance_group'], approach: 'Filtered employees with Initiative_Rating > 7 but Innovation_Projects_Involvement = 0. Grouped by Department. Computed the percentage with overtime > 10h/week (bandwidth constraint) and the percentage in junior roles (access constraint) as measurable proxies for likely blockers. AI synthesises these signals into actionable HR recommendations.' },
 ]
 
 function useAnalysis(fetchFn) {
@@ -50,8 +51,16 @@ export default function Section3() {
             <span className="text-brand-400 font-semibold mr-1.5">{TABS.find(t => t.id === tab)?.sub}.</span>
             {TABS.find(t => t.id === tab)?.question}
           </p>
+          {TABS.find(t => t.id === tab)?.columns && (
+            <p className="text-xs text-slate-600 mt-1">
+              <span className="text-slate-500">Fields: </span>
+              {TABS.find(t => t.id === tab).columns.join(' · ')}
+            </p>
+          )}
         </div>
       )}
+
+      <AnalysisApproach approach={TABS.find(t => t.id === tab)?.approach} />
 
       {current.error && <div className="card p-4 border-red-500/20"><p className="text-red-400 text-sm">{current.error}</p></div>}
 

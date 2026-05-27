@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { getQ22, getQ23, getQ24 } from '../services/api'
 import { GroupedBarChart, ScatterPlot, LineChartComp } from '../components/charts/index'
+import AnalysisApproach from '../components/AnalysisApproach'
 
 const TABS = [
-  { id: 'q22', label: 'Salary & Bonus vs Performance', sub: 'Q22', question: 'How do Salary Increase % and Bonus % relate to Performance Rating across employee groups?' },
-  { id: 'q23', label: 'Underpaid Employees',            sub: 'Q23', question: 'Which high-performing employees are underpaid relative to their performance and skill levels?' },
-  { id: 'q24', label: 'Benefits vs Retention',          sub: 'Q24', question: 'Do compensation benefits (stock options, insurance, etc.) influence employee retention and satisfaction?' },
+  { id: 'q22', label: 'Salary & Bonus vs Performance', sub: 'Q22', question: 'How do Salary Increase % and Bonus % relate to Performance Rating across employee groups?', columns: ['Annual_Salary_Increase_Percentage', 'Performance_Bonus_Percentage', 'Performance_Rating'], approach: 'Computed Pearson r between Annual_Salary_Increase_Percentage and Performance_Rating, and separately between Performance_Bonus_Percentage and Performance_Rating. Grouped employees into performance tiers (Low/Medium/High) and compared their average compensation in each tier. Scatter plots reveal whether the correlation is linear or step-based, and whether high performers are consistently rewarded.' },
+  { id: 'q23', label: 'Underpaid Employees',            sub: 'Q23', question: 'Which high-performing employees are underpaid relative to their performance and skill levels?', columns: ['Performance_Rating', 'Annual_Salary_Increase_Percentage', 'Department'], approach: 'Defined "underpaid" using a dual threshold: Performance_Rating above the 75th percentile AND Annual_Salary_Increase_Percentage below the 25th percentile. This quadrant identifies employees delivering top results with below-market compensation. Grouped by Department and cross-referenced with Resignation_Status to quantify the business cost — how many have already left.' },
+  { id: 'q24', label: 'Benefits vs Retention',          sub: 'Q24', question: 'Do compensation benefits (stock options, insurance, etc.) influence employee retention and satisfaction?', columns: ['Employee_Stock_Options', 'Employee_Health_Insurance_Coverage', 'Employee_Resignation_Status'], approach: 'Grouped employees by combinations of benefit coverage tiers (Stock Options level × Health Insurance level). For each tier combination, computed Resignation_Rate and average Job_Satisfaction_Score. The chart and table reveal whether richer benefit packages statistically correlate with lower attrition — distinguishing benefit impact from performance effects.' },
 ]
 
 function useAnalysis(fetchFn) {
@@ -46,8 +47,16 @@ export default function Section6() {
             <span className="text-brand-400 font-semibold mr-1.5">{TABS.find(t => t.id === tab)?.sub}.</span>
             {TABS.find(t => t.id === tab)?.question}
           </p>
+          {TABS.find(t => t.id === tab)?.columns && (
+            <p className="text-xs text-slate-600 mt-1">
+              <span className="text-slate-500">Fields: </span>
+              {TABS.find(t => t.id === tab).columns.join(' · ')}
+            </p>
+          )}
         </div>
       )}
+
+      <AnalysisApproach approach={TABS.find(t => t.id === tab)?.approach} />
 
       {current.error && <div className="card p-4 border-red-500/20"><p className="text-red-400 text-sm">{current.error}</p></div>}
 

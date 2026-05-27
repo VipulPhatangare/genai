@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { sendChatMessage } from '../services/api'
-import { Send, Sparkles, User, Bot, Loader2, Plus, Trash2, MessageSquare, Clock } from 'lucide-react'
+import {
+  Send, Sparkles, User, Bot, Loader2, Plus, Trash2,
+  MessageSquare, Clock, ChevronDown, ChevronRight,
+  Database, Brain, AlertTriangle,
+} from 'lucide-react'
 import ChatVisualization from '../components/ChatVisualization'
 
 // ── localStorage helpers ──
@@ -77,6 +81,36 @@ function getSessionTitle(msgs) {
   return firstUser.content.length > 45
     ? firstUser.content.slice(0, 42) + '...'
     : firstUser.content
+}
+
+// ── Collapsible panel ──
+function CollapsiblePanel({ icon: Icon, label, color = 'brand', children }) {
+  const [open, setOpen] = useState(false)
+  const colorMap = {
+    brand:   { btn: 'text-brand-400 hover:bg-brand-500/10',   icon: 'text-brand-400' },
+    purple:  { btn: 'text-purple-400 hover:bg-purple-500/10', icon: 'text-purple-400' },
+    emerald: { btn: 'text-emerald-400 hover:bg-emerald-500/10', icon: 'text-emerald-400' },
+  }
+  const c = colorMap[color] || colorMap.brand
+  return (
+    <div className="mt-1.5">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 text-[11px] font-medium px-2 py-1 rounded-lg transition-all ${c.btn}`}
+      >
+        <Icon className={`w-3 h-3 ${c.icon}`} />
+        <span>{label}</span>
+        {open
+          ? <ChevronDown className="w-3 h-3 opacity-60" />
+          : <ChevronRight className="w-3 h-3 opacity-60" />}
+      </button>
+      {open && (
+        <div className="mt-1 mx-1 rounded-xl border border-surface-500/50 bg-surface-700/60 p-3 text-xs text-slate-300 leading-relaxed">
+          {children}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const SUGGESTIONS = [
@@ -186,6 +220,9 @@ export default function Chat() {
         role: 'assistant',
         content: res.data.reply,
         visualization: res.data.visualization || null,
+        reasoning: res.data.reasoning || null,
+        pipeline: res.data.pipeline || null,
+        recordCount: res.data.recordCount ?? null,
       }])
     } catch (err) {
       patchCurrentSession([...withUser, {
@@ -209,7 +246,7 @@ export default function Chat() {
           </div>
           <div className="min-w-0">
             <p className="text-white font-semibold text-sm">AI-Powered HR Chat</p>
-            <p className="text-slate-500 text-xs truncate">AI-Powered · MongoDB NL2Query</p>
+            <p className="text-slate-500 text-xs truncate">NL2Query · MongoDB Aggregation · Real-time Grounding</p>
           </div>
         </div>
 
@@ -237,6 +274,46 @@ export default function Chat() {
                     ? renderMarkdown(msg.content)
                     : msg.content}
                 </div>
+
+                {/* Record count badge + small sample warning */}
+                {msg.role === 'assistant' && !msg.error && msg.recordCount !== null && msg.recordCount !== undefined && (
+                  <div className="flex items-center gap-2 mt-1.5 px-1">
+                    {msg.recordCount === 0 ? (
+                      <span className="flex items-center gap-1 text-[10px] text-slate-600">
+                        <Database className="w-2.5 h-2.5" />
+                        No records matched — answer based on domain knowledge
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] text-slate-600">
+                        <Database className="w-2.5 h-2.5 text-brand-500/60" />
+                        Retrieved {msg.recordCount} record{msg.recordCount !== 1 ? 's' : ''} from employees collection
+                      </span>
+                    )}
+                    {msg.recordCount > 0 && msg.recordCount < 10 && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-500/80 bg-amber-500/10 px-1.5 py-0.5 rounded-full border border-amber-500/20">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        Small sample — interpret with caution
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Collapsible: AI Reasoning */}
+                {msg.role === 'assistant' && !msg.error && msg.reasoning && (
+                  <CollapsiblePanel icon={Brain} label="View AI Reasoning" color="purple">
+                    {renderMarkdown(msg.reasoning)}
+                  </CollapsiblePanel>
+                )}
+
+                {/* Collapsible: MongoDB Query */}
+                {msg.role === 'assistant' && !msg.error && msg.pipeline && msg.pipeline.length > 0 && (
+                  <CollapsiblePanel icon={Database} label="View MongoDB Query" color="brand">
+                    <pre className="text-[10px] text-slate-400 whitespace-pre-wrap break-all font-mono overflow-x-auto">
+                      {JSON.stringify(msg.pipeline, null, 2)}
+                    </pre>
+                  </CollapsiblePanel>
+                )}
+
                 {msg.role === 'assistant' && msg.visualization && (
                   <ChatVisualization viz={msg.visualization} />
                 )}

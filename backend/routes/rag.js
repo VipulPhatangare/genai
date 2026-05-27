@@ -9,8 +9,8 @@ router.post('/chat', async (req, res) => {
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    const { reply, visualization } = await ragQuery(message.trim(), Array.isArray(history) ? history : []);
-    res.json({ reply, visualization });
+    const { reply, visualization, reasoning, pipeline, recordCount } = await ragQuery(message.trim(), Array.isArray(history) ? history : []);
+    res.json({ reply, visualization, reasoning, pipeline, recordCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

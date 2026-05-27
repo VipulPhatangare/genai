@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react'
 import { getQ1, getQ2, getQ3, getQ4, getQ5 } from '../services/api'
 import { GroupedBarChart, SingleBarChart, RadarChartComp, HorizontalBarChart } from '../components/charts/index'
 import LLMInsightCard from '../components/LLMInsightCard'
+import AnalysisApproach from '../components/AnalysisApproach'
 import StatCard from '../components/StatCard'
 import { TrendingUp, Target, Users, AlertTriangle } from 'lucide-react'
 
 const TABS = [
-  { id: 'q1', label: 'Weighted Scoring', sub: 'Q1', question: 'How do Technical, Communication & Problem-Solving skills collectively influence Performance Rating?' },
-  { id: 'q2', label: 'High Perf / Low Leadership', sub: 'Q2', hasLLM: true, question: 'Which employees show high performance but low leadership potential, and what are the likely reasons?' },
-  { id: 'q3', label: 'High vs Low Patterns', sub: 'Q3', question: 'What behavioral patterns separate high performers (≥10) from low performers (≤5)?' },
-  { id: 'q4', label: 'Skill-Outcome Gap', sub: 'Q4', hasLLM: true, question: 'Where do high skill ratings not align with actual project outcomes, and what explains the anomaly?' },
-  { id: 'q5', label: 'Ideal Employee Profile', sub: 'Q5', question: 'What defines an ideal employee based on the top 10% performers across all rating columns?' },
+  { id: 'q1', label: 'Weighted Scoring', sub: 'Q1', question: 'How do Technical, Communication & Problem-Solving skills collectively influence Performance Rating?', columns: ['Technical_Skills_Rating', 'Communication_Skills_Rating', 'Problem_Solving_Skills_Rating', 'Performance_Rating'], approach: 'Computed Pearson correlation between each of the three skill ratings and Performance_Rating across all employees. Correlation values were normalised to percentage weights showing relative influence. The bar chart maps each skill\'s contribution so you can see which capability most strongly predicts performance.' },
+  { id: 'q2', label: 'High Perf / Low Leadership', sub: 'Q2', hasLLM: true, question: 'Which employees show high performance but low leadership potential, and what are the likely reasons?', columns: ['Performance_Rating', 'Leadership_Potential', 'Mentor_Rating', 'Department'], approach: 'Filtered employees where Performance_Rating > 8 AND Leadership_Potential < 5. Grouped this mismatch cohort by Department to locate concentrations. Averaged Mentor_Rating to test whether poor mentoring explains the leadership gap. A statistical summary is then passed to the AI which reasons over multiple variables to surface root causes.' },
+  { id: 'q3', label: 'High vs Low Patterns', sub: 'Q3', question: 'What behavioral patterns separate high performers (≥10) from low performers (≤5)?', columns: ['performance_group', 'Technical_Skills_Rating', 'Communication_Skills_Rating', 'Teamwork_Skills_Rating', 'Leadership_Qualities_Rating'], approach: 'Split employees into two cohorts — high performers (Performance_Rating ≥ 10) and low performers (≤ 5). Computed the mean of four skill dimensions for each cohort. The grouped bar chart overlays both profiles so the skills gap that most strongly separates the two groups becomes immediately visible.' },
+  { id: 'q4', label: 'Skill-Outcome Gap', sub: 'Q4', hasLLM: true, question: 'Where do high skill ratings not align with actual project outcomes, and what explains the anomaly?', columns: ['Technical_Skills_Rating', 'Project_Outcome', 'Project_Complexity', 'Overtime_Hours_Per_Week'], approach: 'Identified employees with average skill score > 7 whose Project_Outcome was still Failed. Grouped this anomaly set by Project_Complexity to see where mismatches cluster. Averaged Overtime_Hours_Per_Week as a burnout proxy. The statistical summary is forwarded to the AI to reason why skilled employees still fail projects.' },
+  { id: 'q5', label: 'Ideal Employee Profile', sub: 'Q5', question: 'What defines an ideal employee based on the top 10% performers across all rating columns?', columns: ['Performance_Rating', 'all skill ratings', 'Employee_Engagement_Score', 'Professional_Development_Hours'], approach: 'Isolated the top 10% of employees by Performance_Rating. Computed the mean of every skill, engagement, and development column for this elite group and compared it against the full-workforce average. The radar chart overlays both profiles to reveal the shape of the ideal employee across all dimensions.' },
 ]
 
 function useAnalysis(fetchFn) {
@@ -69,8 +70,16 @@ export default function Section1() {
             <span className="text-brand-400 font-semibold mr-1.5">{TABS.find(t => t.id === tab)?.sub}.</span>
             {TABS.find(t => t.id === tab)?.question}
           </p>
+          {TABS.find(t => t.id === tab)?.columns && (
+            <p className="text-xs text-slate-600 mt-1">
+              <span className="text-slate-500">Fields: </span>
+              {TABS.find(t => t.id === tab).columns.join(' · ')}
+            </p>
+          )}
         </div>
       )}
+
+      <AnalysisApproach approach={TABS.find(t => t.id === tab)?.approach} />
 
       {current.error && (
         <div className="card p-4 border-red-500/20 bg-red-500/5">

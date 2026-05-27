@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { to: '/attrition',    icon: UserMinus,       label: 'Attrition',        sub: 'Q19 – Q21' },
   { to: '/compensation', icon: DollarSign,      label: 'Compensation',     sub: 'Q22 – Q24' },
   { to: '/recruitment',  icon: Users,           label: 'Recruitment',      sub: 'Q25' },
-  { to: '/chat',         icon: MessageSquare,   label: 'AI Chat',          sub: 'RAG Query' },
+  { to: '/chat',         icon: MessageSquare,   label: 'AI Chat',          sub: 'NL2Query · AI' },
 ]
 
 export default function Sidebar() {

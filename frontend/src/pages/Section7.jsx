@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getQ25 } from '../services/api'
 import { GroupedBarChart } from '../components/charts/index'
+import AnalysisApproach from '../components/AnalysisApproach'
 
 function useAnalysis(fetchFn) {
   const [data, setData] = useState(null)
@@ -24,7 +25,13 @@ export default function Section7() {
           <span className="text-brand-400 font-semibold mr-1.5">Q25.</span>
           How do Hiring Source, Time-to-Hire and Recruitment Cost impact employee performance, retention and job satisfaction?
         </p>
+        <p className="text-xs text-slate-600 mt-1">
+          <span className="text-slate-500">Fields: </span>
+          Hiring_Source · Performance_Rating · Time_to_Hire · Recruitment_Cost · Employee_Resignation_Status
+        </p>
       </div>
+
+      <AnalysisApproach approach="Grouped all employees by Hiring_Source (LinkedIn, Referral, Job Board, Campus, etc.). For each source, computed average Performance_Rating, Job_Satisfaction_Score, Resignation_Rate, Time_to_Hire (days), and Recruitment_Cost. The three-chart layout separates quality metrics (performance, satisfaction), efficiency metrics (resignation rate, time-to-hire), and cost from a single cross-source comparison — identifying the most cost-effective and talent-quality-effective hiring channels." />
 
       {q25.error && <div className="card p-4 border-red-500/20"><p className="text-red-400 text-sm">{q25.error}</p></div>}
 

@@ -1,10 +1,20 @@
-import { Sparkles, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { Sparkles, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 
 function parseInsight(text) {
-  if (!text) return { finding: '', evidence: [], recommendation: '' }
-  const findingMatch = text.match(/\*\*KEY FINDING:\*\*\s*(.+?)(?=\n|\*\*|$)/s)
-  const evidenceMatch = text.match(/\*\*EVIDENCE:\*\*\s*([\s\S]+?)(?=\*\*RECOMMENDATION|\*\*$|$)/)
-  const recMatch = text.match(/\*\*RECOMMENDATION:\*\*\s*([\s\S]+?)$/)
+  if (!text) return { reasoning: [], finding: '', evidence: [], recommendation: '' }
+
+  const reasoningMatch   = text.match(/\*\*REASONING:\*\*\s*([\s\S]+?)(?=\*\*KEY FINDING|\*\*$|$)/i)
+  const findingMatch     = text.match(/\*\*KEY FINDING:\*\*\s*(.+?)(?=\n|\*\*|$)/s)
+  const evidenceMatch    = text.match(/\*\*EVIDENCE:\*\*\s*([\s\S]+?)(?=\*\*RECOMMENDATION|\*\*$|$)/)
+  const recMatch         = text.match(/\*\*RECOMMENDATION:\*\*\s*([\s\S]+?)$/)
+
+  const reasoning = reasoningMatch
+    ? reasoningMatch[1]
+        .split('\n')
+        .map(l => l.replace(/^[•\-*]\s*/, '').trim())
+        .filter(l => l.length > 0)
+    : []
 
   const evidence = evidenceMatch
     ? evidenceMatch[1]
@@ -14,14 +24,16 @@ function parseInsight(text) {
     : []
 
   return {
+    reasoning,
     finding: findingMatch ? findingMatch[1].trim() : '',
     evidence,
     recommendation: recMatch ? recMatch[1].trim() : '',
   }
 }
 
-export default function LLMInsightCard({ insight, loading, question }) {
+export default function LLMInsightCard({ insight, loading }) {
   const parsed = parseInsight(insight)
+  const [reasoningOpen, setReasoningOpen] = useState(false)
 
   return (
     <div className="card h-full flex flex-col">
@@ -46,6 +58,32 @@ export default function LLMInsightCard({ insight, loading, question }) {
           </div>
         ) : insight ? (
           <div className="space-y-4 animate-fade-in">
+
+            {/* Reasoning — collapsible */}
+            {parsed.reasoning.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setReasoningOpen(o => !o)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-purple-400 uppercase tracking-wider mb-1.5 hover:text-purple-300 transition-colors"
+                >
+                  {reasoningOpen
+                    ? <ChevronDown className="w-3.5 h-3.5" />
+                    : <ChevronRight className="w-3.5 h-3.5" />}
+                  Reasoning
+                </button>
+                {reasoningOpen && (
+                  <ul className="space-y-1.5 pl-1">
+                    {parsed.reasoning.map((item, i) => (
+                      <li key={i} className="flex gap-2 text-xs text-slate-400">
+                        <span className="text-purple-500 mt-0.5 shrink-0">•</span>
+                        <span className="leading-relaxed">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {parsed.finding && (
               <div>
                 <p className="text-xs font-semibold text-brand-500 uppercase tracking-wider mb-1.5">

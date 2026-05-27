@@ -6,6 +6,10 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const SYSTEM_PROMPT = `You are an expert HR data analyst. You are given ONLY computed statistical summaries — never raw data.
 Respond in EXACTLY this markdown format (no deviations):
 
+**REASONING:**
+• [Multi-factor analytical step: compare at least 2 variables, explain causality or correlation, note any edge case or small sample if n < 10]
+• [Second analytical step: identify the most surprising or counter-intuitive pattern in the data]
+
 **KEY FINDING:** [One crisp sentence stating the most important insight]
 
 **EVIDENCE:**
@@ -34,11 +38,6 @@ async function askGemini(question, dataContext, cacheKey) {
 
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-
-  console.log('\n===== GEMINI RESPONSE =====');
-  console.log('Cache Key:', cacheKey);
-  console.log('Response:\n', text);
-  console.log('===========================\n');
 
   try {
     await AnalysisCache.create({ key: cacheKey, result: text });

@@ -3,7 +3,6 @@ const Employee = require('../models/Employee');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ── Schema description given to the LLM so it can generate correct queries ──
 const SCHEMA = `
 MongoDB collection name: employees
 
@@ -49,14 +48,11 @@ Fields and types:
   Employee_Stock_Options       string
 `;
 
-// ── Detect greetings / small-talk so we don't run a DB query for "Hi" ──
 function isSmallTalk(msg) {
   return /^(hi+|hello|hey|howdy|good\s*(morning|afternoon|evening)|what'?s up|sup|yo|thanks|thank you|ok(ay)?|cool|great|sure|bye|goodbye|who are you|what can you do)[\s!?.]*$/i
     .test(msg.trim());
 }
 
-// ── Step 1: ask LLM to generate a Mongo aggregation pipeline ──
-// previousError: if set, we are retrying — tell LLM what broke last time
 async function generatePipeline(userQuestion, chatHistory, previousError = null) {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -109,10 +105,10 @@ If absolutely no pipeline is possible, return: []`;
 
   const raw = result.response.text().trim();
   const clean = raw
-    .replace(/```[\w]*\n?/g, '')       // strip markdown fences
-    .replace(/\/\/[^\n]*/g, '')         // strip // line comments
-    .replace(/\/\*[\s\S]*?\*\//g, '')   // strip /* */ block comments
-    .replace(/,(\s*[}\]])/g, '$1')      // remove trailing commas
+    .replace(/```[\w]*\n?/g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/,(\s*[}\]])/g, '$1')
     .trim();
 
   const match = clean.match(/\[[\s\S]*\]/);
@@ -120,16 +116,12 @@ If absolutely no pipeline is possible, return: []`;
   return JSON.parse(match[0]);
 }
 
-// ── Step 2: validate and execute the pipeline safely (read-only) ──
-
-// Whitelist: ONLY these aggregation stages are allowed to run.
-// Anything not listed here — including $out and $merge — is rejected.
 const ALLOWED_STAGES = new Set([
   '$match', '$group', '$sort', '$limit', '$skip',
   '$project', '$addFields', '$unwind', '$count',
   '$bucket', '$bucketAuto', '$sortByCount',
   '$replaceRoot', '$replaceWith', '$sample',
-  '$facet', '$lookup',               // nested pipelines are checked recursively
+  '$facet', '$lookup',
 ]);
 
 function validatePipeline(pipeline, depth = 0) {
@@ -145,11 +137,9 @@ function validatePipeline(pipeline, depth = 0) {
 
     const op = keys[0];
     if (!ALLOWED_STAGES.has(op)) {
-      console.warn(`[SECURITY] Blocked disallowed pipeline stage: ${op}`);
       throw new Error(`Stage "${op}" is not allowed`);
     }
 
-    // Recursively validate nested pipelines inside $lookup and $facet
     if (op === '$lookup' && stage.$lookup.pipeline) {
       validatePipeline(stage.$lookup.pipeline, depth + 1);
     }
@@ -163,19 +153,18 @@ function validatePipeline(pipeline, depth = 0) {
 
 async function executePipeline(pipeline) {
   if (!Array.isArray(pipeline) || pipeline.length === 0) return null;
-  validatePipeline(pipeline);                     // throws if anything is unsafe
+  validatePipeline(pipeline);
   return Employee.aggregate(pipeline).limit(50);
 }
 
-// ── Step 3: ask LLM to interpret results, write the answer, and pick a chart ──
-
-// Parse the delimited response format: ANSWER: ... VISUALIZATION: {...}
-// Keeping answer as plain text avoids JSON-escaping failures on multiline strings.
+// Parse REASONING / ANSWER / VISUALIZATION sections from LLM output
 function parseDelimitedResponse(text) {
-  const answerMatch = text.match(/ANSWER:\s*([\s\S]*?)(?=\nVISUALIZATION:|$)/i);
-  const vizMatch    = text.match(/VISUALIZATION:\s*(\{[\s\S]*\})/i);
+  const reasoningMatch = text.match(/REASONING:\s*([\s\S]*?)(?=\nANSWER:|$)/i);
+  const answerMatch    = text.match(/ANSWER:\s*([\s\S]*?)(?=\nVISUALIZATION:|$)/i);
+  const vizMatch       = text.match(/VISUALIZATION:\s*(\{[\s\S]*\})/i);
 
-  const answer = answerMatch ? answerMatch[1].trim() : text.trim();
+  const reasoning = reasoningMatch ? reasoningMatch[1].trim() : null;
+  const answer    = answerMatch    ? answerMatch[1].trim()    : text.trim();
 
   let visualization = null;
   if (vizMatch) {
@@ -184,12 +173,10 @@ function parseDelimitedResponse(text) {
       if (v.type && v.type !== 'none' && v.data && v.data.length > 0) {
         visualization = v;
       }
-    } catch (e) {
-      console.warn('Viz JSON parse failed:', e.message);
-    }
+    } catch (_) {}
   }
 
-  return { answer, visualization };
+  return { answer, visualization, reasoning };
 }
 
 async function analyseResults(userQuestion, results, chatHistory) {
@@ -219,10 +206,13 @@ ${hasData
   : 'Answer from general HR knowledge since no data was available. Explicitly state the answer is based on general knowledge, not this organization\'s data.'
 }
 
-Respond in EXACTLY this two-section format — no deviations:
+Respond in EXACTLY this three-section format — no deviations:
+
+REASONING:
+[2–4 bullet points using • showing multi-factor analysis: compare metrics across groups, explain causality or correlations, flag edge cases or small samples (< 10 records), highlight surprising patterns or confounders]
 
 ANSWER:
-[Your plain-text answer here. Max 200 words. Use • for bullet points. Cite real numbers from the data.]
+[Your plain-text conclusion. Max 150 words. Use • for bullet points. Cite real numbers from the data.]
 
 VISUALIZATION:
 [A single-line JSON object for the best chart, OR {"type":"none"} if no chart fits]
@@ -250,13 +240,7 @@ Pick the best type:
   return parseDelimitedResponse(raw);
 }
 
-// ── Main entry point ──
 async function ragQuery(userQuestion, history = []) {
-  console.log('\n===== CHAT QUERY =====');
-  console.log('Q:', userQuestion);
-  console.log('History turns:', history.length);
-
-  // Small-talk path — no DB needed, no chart
   if (isSmallTalk(userQuestion)) {
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
@@ -270,39 +254,30 @@ async function ragQuery(userQuestion, history = []) {
     const chat = model.startChat({ history: chatHistory });
     const result = await chat.sendMessage(userQuestion);
     const reply = result.response.text();
-    console.log('A (small-talk):', reply);
-    console.log('======================\n');
-    return { reply, visualization: null };
+    return { reply, visualization: null, reasoning: null, pipeline: null, recordCount: null };
   }
 
-  // Data question path: generate pipeline → execute → analyse + pick chart
-  // Retry up to 3 times, feeding the parse error back to the LLM each time
   const MAX_ATTEMPTS = 3;
-  let results = null;
+  let results  = null;
+  let pipeline = null;
   let lastError = null;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const pipeline = await generatePipeline(userQuestion, history, lastError);
-      console.log(`Pipeline (attempt ${attempt}):`, JSON.stringify(pipeline));
-      results = await executePipeline(pipeline);
-      console.log('Results count:', results ? results.length : 0);
+      const p = await generatePipeline(userQuestion, history, lastError);
+      results  = await executePipeline(p);
+      pipeline = p;
       lastError = null;
-      break; // success — exit retry loop
+      break;
     } catch (err) {
       lastError = err.message;
-      console.error(`Pipeline attempt ${attempt}/${MAX_ATTEMPTS} failed:`, err.message);
-      if (attempt === MAX_ATTEMPTS) {
-        console.warn('All pipeline attempts exhausted — falling back to domain knowledge');
-      }
     }
   }
 
-  const { answer, visualization } = await analyseResults(userQuestion, results, history);
-  console.log('A:', answer);
-  console.log('Viz type:', visualization?.type ?? 'none');
-  console.log('======================\n');
-  return { reply: answer, visualization };
+  const recordCount = results ? results.length : 0;
+  const { answer, visualization, reasoning } = await analyseResults(userQuestion, results, history);
+
+  return { reply: answer, visualization, reasoning, pipeline, recordCount };
 }
 
 module.exports = { ragQuery };

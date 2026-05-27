@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { getQ6, getQ7, getQ8, getQ9, getQ10 } from '../services/api'
 import { GroupedBarChart, SingleBarChart } from '../components/charts/index'
 import LLMInsightCard from '../components/LLMInsightCard'
+import AnalysisApproach from '../components/AnalysisApproach'
 
 const TABS = [
-  { id: 'q6',  label: 'Dev Hours vs Performance', sub: 'Q6',  question: 'Do Professional Development Hours correlate with Performance Rating and number of Promotions?' },
-  { id: 'q7',  label: 'Mentor Impact',             sub: 'Q7',  hasLLM: true, question: 'How does Mentor Rating and Experience Level affect internship conversion and employee performance?' },
-  { id: 'q8',  label: 'Trained but Low Perf',      sub: 'Q8',  hasLLM: true, question: 'Which employees received training but still show low performance improvement, and what are the likely causes?' },
-  { id: 'q9',  label: 'Basic vs Advanced',          sub: 'Q9',  question: 'How do Basic vs Advanced training programs differ in their effect on performance and career growth?' },
-  { id: 'q10', label: 'Training Candidates',        sub: 'Q10', hasLLM: true, question: 'Which employees are most likely to benefit from advanced training programs based on current performance patterns?' },
+  { id: 'q6',  label: 'Dev Hours vs Performance', sub: 'Q6',  question: 'Do Professional Development Hours correlate with Performance Rating and number of Promotions?', columns: ['Professional_Development_Hours', 'Performance_Rating', 'Number_Of_Promotions'], approach: 'Computed Pearson r between Professional_Development_Hours and both Performance_Rating and Number_Of_Promotions to test whether learning hours drive outcomes. Employees were also grouped by Training_Program to compare development investment vs results across program types side-by-side.' },
+  { id: 'q7',  label: 'Mentor Impact',             sub: 'Q7',  hasLLM: true, question: 'How does Mentor Rating and Experience Level affect internship conversion and employee performance?', columns: ['Mentor_Rating', 'Mentor_Experience_Level', 'Internship_Conversion_Status', 'Performance_Rating'], approach: 'Grouped employees by Mentor_Experience_Level (Junior/Mid/Senior) and separately by Mentor_Rating bucket. For each group, computed average Performance_Rating and Internship_Conversion_Rate. Dual-axis bar charts compare mentoring quality against outcomes across both dimensions. The AI then reasons over cross-group patterns.' },
+  { id: 'q8',  label: 'Trained but Low Perf',      sub: 'Q8',  hasLLM: true, question: 'Which employees received training but still show low performance improvement, and what are the likely causes?', columns: ['Training_Program', 'Performance_Rating', 'Professional_Development_Hours'], approach: 'Filtered employees who completed any Training_Program but still have Performance_Rating ≤ 5. Grouped by Department to find structural hotspots. Computed what percentage had no mentor and what percentage had overtime > 10h/week — two candidate root causes. AI synthesises these signals to explain why training did not translate to performance.' },
+  { id: 'q9',  label: 'Basic vs Advanced',          sub: 'Q9',  question: 'How do Basic vs Advanced training programs differ in their effect on performance and career growth?', columns: ['Training_Program', 'Performance_Rating', 'Number_Of_Promotions'], approach: 'Grouped all employees by Training_Program type. Computed mean Performance_Rating and Number_Of_Promotions per program group. Side-by-side bars show whether advanced programs deliver measurably better career outcomes than basic ones — revealing whether program type predicts growth.' },
+  { id: 'q10', label: 'Training Candidates',        sub: 'Q10', hasLLM: true, question: 'Which employees are most likely to benefit from advanced training programs based on current performance patterns?', columns: ['Training_Program', 'Performance_Rating', 'Employee_Engagement_Score'], approach: 'Identified mid-performers (Performance_Rating 6–9) — employees who show potential but have not peaked. Grouped by Department to surface where training investment yields the highest lift. AI cross-references engagement scores and current training status to prioritise the best candidates for upskilling.' },
 ]
 
 function useAnalysis(fetchFn) {
@@ -52,8 +53,16 @@ export default function Section2() {
             <span className="text-brand-400 font-semibold mr-1.5">{TABS.find(t => t.id === tab)?.sub}.</span>
             {TABS.find(t => t.id === tab)?.question}
           </p>
+          {TABS.find(t => t.id === tab)?.columns && (
+            <p className="text-xs text-slate-600 mt-1">
+              <span className="text-slate-500">Fields: </span>
+              {TABS.find(t => t.id === tab).columns.join(' · ')}
+            </p>
+          )}
         </div>
       )}
+
+      <AnalysisApproach approach={TABS.find(t => t.id === tab)?.approach} />
 
       {current.error && <div className="card p-4 border-red-500/20"><p className="text-red-400 text-sm">{current.error}</p></div>}
 

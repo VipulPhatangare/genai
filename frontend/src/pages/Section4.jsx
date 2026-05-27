@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { getQ15, getQ16, getQ17, getQ18 } from '../services/api'
 import { GroupedBarChart, HorizontalBarChart } from '../components/charts/index'
 import { Heatmap } from '../components/charts/index'
+import AnalysisApproach from '../components/AnalysisApproach'
 
 const TABS = [
-  { id: 'q15', label: 'Complexity × Size Heatmap',  sub: 'Q15', question: 'How do Project Complexity and Project Size together influence the probability of a successful project outcome?' },
-  { id: 'q16', label: 'Success vs Failure Patterns', sub: 'Q16', question: 'What patterns in skills, training and behavior distinguish employees in successful vs failed projects?' },
-  { id: 'q17', label: 'Feature Importance',           sub: 'Q17', question: 'What combination of skills and ratings best predicts a successful project outcome?' },
-  { id: 'q18', label: 'Performance by Role',          sub: 'Q18', question: 'How does performance rating distribution compare across Manager, Developer and Analyst project roles?' },
+  { id: 'q15', label: 'Complexity × Size Heatmap',  sub: 'Q15', question: 'How do Project Complexity and Project Size together influence the probability of a successful project outcome?', columns: ['Project_Complexity', 'Project_Size', 'Project_Outcome'], approach: 'Built a 3×3 cross-tabulation of Project_Complexity (Low/Medium/High) × Project_Size (Small/Medium/Large). Each cell holds the success-rate percentage for that combination. The heatmap colour-codes cells from red (high failure) to green (high success), immediately surfacing the riskiest project configurations.' },
+  { id: 'q16', label: 'Success vs Failure Patterns', sub: 'Q16', question: 'What patterns in skills, training and behavior distinguish employees in successful vs failed projects?', columns: ['Project_Outcome', 'Technical_Skills_Rating', 'Training_Program'], approach: 'Grouped employees by Project_Outcome (Successful vs Failed). Computed the mean of six skill ratings for each group to reveal where the capability gap lives. Additionally compared training program distribution across both groups. Overlaid bar charts make the skill and training patterns between successful and failed employees immediately comparable.' },
+  { id: 'q17', label: 'Feature Importance',           sub: 'Q17', question: 'What combination of skills and ratings best predicts a successful project outcome?', columns: ['Project_Outcome', 'all skill ratings', 'Project_Complexity'], approach: 'Computed Pearson |r| (absolute correlation) between each numeric feature and Project_Outcome (binary: 1=Success, 0=Failure). Ranked all features by correlation strength. The horizontal bar chart shows which individual inputs most predict project success — effectively a lightweight feature-importance analysis without requiring a trained ML model.' },
+  { id: 'q18', label: 'Performance by Role',          sub: 'Q18', question: 'How does performance rating distribution compare across Manager, Developer and Analyst project roles?', columns: ['Project_Role', 'Performance_Rating', 'Department'], approach: 'Grouped employees by Project_Role. Computed full distribution statistics for Performance_Rating per role: min, Q1, median, Q3, max, and mean. Box-plot-style grouped bars visualise spread and central tendency, while the summary table adds resignation rate per role — connecting performance distribution to attrition risk.' },
 ]
 
 function useAnalysis(fetchFn) {
@@ -49,8 +50,16 @@ export default function Section4() {
             <span className="text-brand-400 font-semibold mr-1.5">{TABS.find(t => t.id === tab)?.sub}.</span>
             {TABS.find(t => t.id === tab)?.question}
           </p>
+          {TABS.find(t => t.id === tab)?.columns && (
+            <p className="text-xs text-slate-600 mt-1">
+              <span className="text-slate-500">Fields: </span>
+              {TABS.find(t => t.id === tab).columns.join(' · ')}
+            </p>
+          )}
         </div>
       )}
+
+      <AnalysisApproach approach={TABS.find(t => t.id === tab)?.approach} />
 
       {current.error && <div className="card p-4 border-red-500/20"><p className="text-red-400 text-sm">{current.error}</p></div>}
 

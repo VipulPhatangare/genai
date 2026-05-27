@@ -21,27 +21,20 @@ app.use('/api/analysis/recruitment', require('./routes/analysis/recruitment'));
 app.use('/api/rag', require('./routes/rag'));
 
 app.use((err, req, res, next) => {
-  console.error(err.stack);
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
-    console.log('MongoDB connected');
-    // One-time cleanup: remove legacy embedding vectors from all documents
     const Employee = require('./models/Employee');
-    const result = await Employee.updateMany(
+    await Employee.updateMany(
       { embedding: { $exists: true } },
       { $unset: { embedding: '' } }
     );
-    if (result.modifiedCount > 0) {
-      console.log(`Cleared embeddings from ${result.modifiedCount} employee documents`);
-    }
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT);
   })
-  .catch(err => {
-    console.error('MongoDB connection failed:', err.message);
+  .catch(() => {
     process.exit(1);
   });
